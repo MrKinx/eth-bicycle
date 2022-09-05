@@ -33,11 +33,40 @@ function addRenter(string memory name, string memory lastName,  address payable 
 
 // Renting request (Check in)
 
+function checkInBike(address walletAddress) public {
+    require(renters[walletAddress].active == false);
+    renters[walletAddress].start = block.timestamp;
+    renters[walletAddress].active = true;
+
+}
+
 // Ending renting (Check out)
 
-// Total stats
+function checkOutBike(address walletAddress) public {
+    require(renters[walletAddress].active == true);
+    renters[walletAddress].end = block.timestamp;
+    renters[walletAddress].active = false;
+
+}
+
+// Get session duration
+
+function getTimeDif (uint end, uint start) internal pure returns(uint) {
+    return end - start;
+}
+
+function getSessionDuration (address walletAddress) public view returns(uint){
+    require(renters[walletAddress].active == false, "You have an ongoing session!");
+    uint thisSession = getTimeDif(renters[walletAddress].end, renters[walletAddress].start);
+    uint sessionInMinutes = thisSession/60;
+    return sessionInMinutes;
+}
 
 // Get Contract balance
+function contractBalance() public view returns(uint){
+    require(msg.sender == owner, "Only owner can execute this function");
+    return address(this).balance;
+}
 
 // get Renter's balance
 
