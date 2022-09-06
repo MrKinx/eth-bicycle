@@ -6,9 +6,11 @@ contract BicycleRenting {
     
     address owner;
     uint ownerBalance;
+    uint public totalBikes;
 
     constructor() {
         owner = msg.sender;
+        totalBikes = 0;
     }
 
     modifier onlyOwner() {
@@ -27,6 +29,7 @@ contract BicycleRenting {
 event Session(
     uint indexed sessionId,
     address indexed renter,
+    uint indexed bikeNumber,
     uint sessionStart,
     uint sessionEnd,
     uint sessionDue
@@ -44,6 +47,25 @@ struct Renter {
     uint sessionNum;
 }
 
+struct Bike {
+    uint bikeNumber;
+    string bikeModel;
+    bool bikeAvailable;
+    address renter;
+}
+mapping (uint => Bike) public bikes;
+
+function addBike(string memory bikeModel, bool bikeAvailable) public{
+    require(bytes(bikeModel).length > 0, "Model is required to be filled");
+    bikes[totalBikes +1] = Bike(totalBikes +1, bikeModel, bikeAvailable, address(0x0));
+    totalBikes ++;
+}
+
+modifier IsBikeAvailable(uint bikeNumber) {
+    require(bikes[bikeNumber].bikeAvailable == true, "Bike is not available!");
+    _;
+}
+
 mapping (address => Renter) public renters;
 // mapping (uint => Session) public sessionDetails;
 //mapping (address => mapping (uint => Session)) public sessions;
@@ -53,23 +75,28 @@ function addRenter(string memory name, string memory lastName, uint balance) pub
 }
 
 // Start Rent
-function reqBikeRide() public {
+function reqBikeRide(uint bikeNumber) public IsBikeAvailable(bikeNumber) {
     require(canRentBike(msg.sender) == true, "You already have an active session");
     renters[msg.sender].start = block.timestamp;
     renters[msg.sender].active = true;
     renters[msg.sender].sessionNum ++;
+    bikes[bikeNumber].bikeAvailable = false;
+    bikes[bikeNumber].renter = msg.sender;
     //sessions[msg.sender][renters[msg.sender].sessionNum].sessionId = renters[msg.sender].sessionNum;
 }
 
 // End Rent
 
-function endBikeRide() public {
+function endBikeRide(uint bikeNumber) public {
     require(renters[msg.sender].active == true, "You don't have an active session!");
+    require(bikes[bikeNumber].renter == msg.sender, "Wrong bike is selected!");
     renters[msg.sender].end = block.timestamp;
     renters[msg.sender].active = false;
+    bikes[bikeNumber].bikeAvailable = true;
+    bikes[bikeNumber].renter = address(0x0);
     setDue(msg.sender);
     //addSession(msg.sender, renters[msg.sender].sessionNum);
-    newSession(renters[msg.sender].sessionNum, msg.sender, renters[msg.sender].start, renters[msg.sender].end, renters[msg.sender].due);
+    newSession(renters[msg.sender].sessionNum, msg.sender, bikeNumber,renters[msg.sender].start, renters[msg.sender].end, renters[msg.sender].due);
     makePayment(msg.sender);
 }
 
@@ -133,8 +160,8 @@ function canRentBike(address walletAddress) public view returns(bool){
  //   sessions[walletAddress][sessionId].sessionDue = renters[walletAddress].due;
 //}
 
-function newSession( uint id,address sender, uint start, uint end, uint due) internal {
-    emit Session(id, sender, start, end, due);
+function newSession( uint id,address sender, uint bikeNumber, uint start, uint end, uint due) internal {
+    emit Session(id, sender, bikeNumber, start, end, due);
 }
 
 }
