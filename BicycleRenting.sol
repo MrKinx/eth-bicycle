@@ -71,11 +71,17 @@ mapping (address => Renter) public renters;
 //mapping (address => mapping (uint => Session)) public sessions;
 
 function addRenter(string memory name, string memory lastName, uint balance) public {
+    require(bytes(name).length >0, "Name can not be empty!" );
     renters[msg.sender] = Renter(name, lastName, 0, 0, false, balance, 0, 0);
 }
 
+modifier IsRenter() {
+    require(bytes(renters[msg.sender].name).length > 0 && bytes(renters[msg.sender].lastName).length > 0, "You have to sign up");
+    _;
+}
+
 // Start Rent
-function reqBikeRide(uint bikeNumber) public IsBikeAvailable(bikeNumber) {
+function reqBikeRide(uint bikeNumber) public IsBikeAvailable(bikeNumber) IsRenter() {
     require(canRentBike(msg.sender) == true, "You already have an active session");
     renters[msg.sender].start = block.timestamp;
     renters[msg.sender].active = true;
@@ -105,7 +111,7 @@ function getTimeDif (uint end, uint start) internal pure returns(uint) {
     return end - start;
 }
 
-function getSessionDuration (address walletAddress) public view returns(uint){
+function getSessionDuration (address walletAddress) internal view returns(uint){
     require(renters[walletAddress].active == false, "You have an ongoing session!");
     uint thisSession = getTimeDif(renters[walletAddress].end, renters[walletAddress].start);
     return thisSession;
@@ -122,7 +128,7 @@ function deposit(address walletAddress) public payable {
 }
 
 // Get Renter's balance
-function balanceOfRenter(address walletAddress) public view returns(uint){
+function balanceOfRenter(address walletAddress) IsRenter() public view returns(uint){
     return renters[walletAddress].balance;
 }
 
