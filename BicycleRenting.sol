@@ -5,24 +5,37 @@ pragma solidity ^0.8.0;
 contract BicycleRenting {
     
     address owner;
-   // uint fee;
+    uint ownerBalance;
 
     constructor() {
         owner = msg.sender;
     }
 
+    modifier onlyOwner() {
+    require(msg.sender == owner, "Access restricted!");
+    _;
+    }
+
 // Add Renter informations
-struct Session{
-    uint sessionId;
-    uint sessionStart;
-    uint sessionEnd;
-    uint sessionDue;
-}
+//struct Session{
+//    uint sessionId;
+//    uint sessionStart;
+//    uint sessionEnd;
+//    uint sessionDue;
+//}
+
+event Session(
+    uint indexed sessionId,
+    address indexed renter,
+    uint sessionStart,
+    uint sessionEnd,
+    uint sessionDue
+);
 
 struct Renter {
     string name;
     string lastName; 
-    address payable walletAddress; 
+    //address payable walletAddress; 
     uint256 start; 
     uint256 end; 
     bool active; 
@@ -33,30 +46,31 @@ struct Renter {
 
 mapping (address => Renter) public renters;
 // mapping (uint => Session) public sessionDetails;
-mapping (address => mapping (uint => Session)) public sessions;
+//mapping (address => mapping (uint => Session)) public sessions;
 
-function addRenter(string memory name, string memory lastName,  address payable walletAddress, uint balance) public {
-    renters[walletAddress] = Renter(name, lastName,walletAddress, 0, 0, false, balance, 0, 0);
+function addRenter(string memory name, string memory lastName, uint balance) public {
+    renters[msg.sender] = Renter(name, lastName, 0, 0, false, balance, 0, 0);
 }
 
 // Start Rent
-function reqBikeRide(address walletAddress) public {
-    require(canRentBike(walletAddress) == true, "You already have an active session");
-    renters[walletAddress].start = block.timestamp;
-    renters[walletAddress].active = true;
-    renters[walletAddress].sessionNum ++;
-    sessions[walletAddress][renters[walletAddress].sessionNum].sessionId = renters[walletAddress].sessionNum;
+function reqBikeRide() public {
+    require(canRentBike(msg.sender) == true, "You already have an active session");
+    renters[msg.sender].start = block.timestamp;
+    renters[msg.sender].active = true;
+    renters[msg.sender].sessionNum ++;
+    //sessions[msg.sender][renters[msg.sender].sessionNum].sessionId = renters[msg.sender].sessionNum;
 }
 
 // End Rent
 
-function endBikeRide(address walletAddress) public {
-    require(renters[walletAddress].active == true, "You don't have an active session!");
-    renters[walletAddress].end = block.timestamp;
-    renters[walletAddress].active = false;
-    setDue(walletAddress);
-    addSession(walletAddress, renters[walletAddress].sessionNum);
-    makePayment(walletAddress);
+function endBikeRide() public {
+    require(renters[msg.sender].active == true, "You don't have an active session!");
+    renters[msg.sender].end = block.timestamp;
+    renters[msg.sender].active = false;
+    setDue(msg.sender);
+    //addSession(msg.sender, renters[msg.sender].sessionNum);
+    newSession(renters[msg.sender].sessionNum, msg.sender, renters[msg.sender].start, renters[msg.sender].end, renters[msg.sender].due);
+    makePayment(msg.sender);
 }
 
 // Get session duration
@@ -71,8 +85,7 @@ function getSessionDuration (address walletAddress) public view returns(uint){
 }
 
 // Get Contract balance
-function contractBalance() public view returns(uint){
-    require(msg.sender == owner, "Only owner can execute this function!");
+function contractBalance() public view onlyOwner returns(uint){
     return address(this).balance;
 }
 
@@ -114,10 +127,14 @@ function canRentBike(address walletAddress) public view returns(bool){
 }
 
 //Add Session Record
-function addSession(address walletAddress, uint sessionId) internal{
-    sessions[walletAddress][sessionId].sessionStart = renters[walletAddress].start;
-    sessions[walletAddress][sessionId].sessionEnd = renters[walletAddress].end;
-    sessions[walletAddress][sessionId].sessionDue = renters[walletAddress].due;
+//function addSession(address walletAddress, uint sessionId) internal{
+//    sessions[walletAddress][sessionId].sessionStart = renters[walletAddress].start;
+ //   sessions[walletAddress][sessionId].sessionEnd = renters[walletAddress].end;
+ //   sessions[walletAddress][sessionId].sessionDue = renters[walletAddress].due;
+//}
+
+function newSession( uint id,address sender, uint start, uint end, uint due) internal {
+    emit Session(id, sender, start, end, due);
 }
 
 }
